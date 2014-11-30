@@ -14,7 +14,7 @@ APlayerCharacter::APlayerCharacter(const class FPostConstructInitializePropertie
 	// Move camera to eye position
 	FirstPersonCameraComponent->RelativeLocation = FVector(16.f, 4.f, BaseEyeHeight + 20.f);
 
-	// Allow pawn to control rotation
+	// Allow pawn to control rotation of camera
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
 
 	CharacterMovement->MaxWalkSpeed = fWalkSpeed;
