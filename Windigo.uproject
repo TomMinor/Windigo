@@ -1,19 +1,18 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "4.5",
+	"EngineAssociation": "4.6",
 	"Category": "",
 	"Description": "",
 	"Modules": [
-		{
-			"Name": "Windigo",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		}
-	],
-	"Plugins": [
-		{
-			"Name": "GitSourceControl",
-			"Enabled": true
-		}
+        {
+            "Name": "Windigo",
+            "Type": "Runtime",
+            "LoadingPhase": "Default"
+        },
+        {
+            "Name": "WindigoEditor",
+            "Type": "Editor",
+            "LoadingPhase": "Default"
+        }
 	]
 }

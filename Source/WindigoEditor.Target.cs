@@ -21,5 +21,9 @@ public class WindigoEditorTarget : TargetRules
 		)
 	{
 		OutExtraModuleNames.AddRange( new string[] { "Windigo" } );
+
+        OutExtraModuleNames.Add("WindigoEditor");
+		
+		
 	}
 }

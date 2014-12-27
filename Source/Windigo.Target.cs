@@ -21,5 +21,10 @@ public class WindigoTarget : TargetRules
 		)
 	{
 		OutExtraModuleNames.AddRange( new string[] { "Windigo" } );
+
+        if (UEBuildConfiguration.bBuildEditor)
+        {
+            OutExtraModuleNames.Add("WindigoEditor");
+        }
 	}
 }

@@ -5,20 +5,35 @@
 #include "GameFramework/Character.h"
 #include "PlayerCharacter.generated.h"
 
+/* TODO
+  - Death state
+  - Alert AI (sound/visual)
+  - Event when we should go into cover
+  - Shake
+    + View bob
+	+ Land shake
+	+ Jump shake
+	+ Blizzard shake?
+*/
+
 /**
  * 
  */
 UCLASS()
 class WINDIGO_API APlayerCharacter : public ACharacter
 {
+	GENERATED_BODY()
+
 public:
-	GENERATED_UCLASS_BODY()
+	APlayerCharacter(const class FObjectInitializer& PCIP);
 
 	virtual void BeginPlay() override;
 
+	virtual void PostInitializeComponents() override;
+
 	// First person camera
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-	TSubobjectPtr<UCameraComponent> FirstPersonCameraComponent;
+	UCameraComponent* FirstPersonCameraComponent;
 
 	/** How fast does the player move when they Sprint? */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement")

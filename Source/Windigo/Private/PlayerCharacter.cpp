@@ -4,12 +4,12 @@
 #include "PlayerCharacter.h"
 
 
-APlayerCharacter::APlayerCharacter(const class FPostConstructInitializeProperties& PCIP)
+APlayerCharacter::APlayerCharacter(const class FObjectInitializer& PCIP)
 	: Super(PCIP), fSprintSpeed(600), fWalkSpeed(140)
 {
 	// Create CameraComponent
 	FirstPersonCameraComponent = PCIP.CreateDefaultSubobject<UCameraComponent>(this, TEXT("FirstPersonCamera"));
-	FirstPersonCameraComponent->AttachParent = CapsuleComponent;
+	FirstPersonCameraComponent->AttachParent = GetCapsuleComponent();
 
 	// Move camera to eye position
 	FirstPersonCameraComponent->RelativeLocation = FVector(16.f, 4.f, BaseEyeHeight + 20.f);
@@ -17,12 +17,22 @@ APlayerCharacter::APlayerCharacter(const class FPostConstructInitializePropertie
 	// Allow pawn to control rotation of camera
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
 
-	CharacterMovement->MaxWalkSpeed = fWalkSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = fWalkSpeed;
 }
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+}
+
+void APlayerCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	// Hide the head mesh in 1st person (we're drawing the visor directly on the screen) 
+	//if (bIsFirstPerson)
+	{
+		GetMesh()->HideBoneByName(TEXT("head"), PBO_None);
+	}
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* InputComponent)
@@ -58,7 +68,7 @@ void APlayerCharacter::MoveForward(float val)
 		FRotator rotation = Controller->GetControlRotation();
 
 		//Limit pitch during walk/fall
-		if (CharacterMovement->IsMovingOnGround() || CharacterMovement->IsFalling())
+		if (GetCharacterMovement()->IsMovingOnGround() || GetCharacterMovement()->IsFalling())
 		{
 			rotation.Pitch = 0.0f;
 		}
@@ -164,10 +174,10 @@ void APlayerCharacter::OnShout()
 
 void APlayerCharacter::OnStartSprint()
 {
-	CharacterMovement->MaxWalkSpeed = fSprintSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = fSprintSpeed;
 }
 
 void APlayerCharacter::OnStopSprint()
 {
-	CharacterMovement->MaxWalkSpeed = fWalkSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = fWalkSpeed;
 }
