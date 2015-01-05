@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "GameFramework/Character.h"
+#include "WindigoBaseCharacter.h"
 #include "PlayerCharacter.generated.h"
 
 /* TODO
@@ -20,7 +20,7 @@
  * 
  */
 UCLASS()
-class WINDIGO_API APlayerCharacter : public ACharacter
+class WINDIGO_API APlayerCharacter : public AWindigoBaseCharacter
 {
 	GENERATED_BODY()
 
@@ -94,4 +94,6 @@ protected:
 	void OnPoint();
 	UFUNCTION()
 	void OnShout();
+
+	void Tick(float DelaySeconds) override;
 };

@@ -16,9 +16,10 @@ AWindigoGameMode::AWindigoGameMode(const class FObjectInitializer& PCIP)
 	if (PlayerPawnObject.Object != NULL)
 	{
 		DefaultPawnClass = (UClass*)PlayerPawnObject.Object->GeneratedClass;
-		GameStateClass = AWindigoGameState::StaticClass();
-		PlayerStateClass = APartnerPlayerState::StaticClass();
 	}
+
+	GameStateClass = AWindigoGameState::StaticClass();
+	PlayerStateClass = APartnerPlayerState::StaticClass();
 }
 
 void AWindigoGameMode::BeginPlay()

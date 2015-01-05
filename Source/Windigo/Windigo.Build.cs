@@ -6,7 +6,7 @@ public class Windigo : ModuleRules
 {
 	public Windigo(TargetInfo Target)
 	{
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "AIModule", "Landscape", "InputCore" });
 
         PrivateDependencyModuleNames.AddRange(new string[] {  });
 

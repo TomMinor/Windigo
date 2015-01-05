@@ -4,11 +4,11 @@
 #include "PlayerCharacter.h"
 
 
-APlayerCharacter::APlayerCharacter(const class FObjectInitializer& PCIP)
-	: Super(PCIP), fSprintSpeed(600), fWalkSpeed(140)
+APlayerCharacter::APlayerCharacter(const class FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer), fSprintSpeed(600), fWalkSpeed(140)
 {
 	// Create CameraComponent
-	FirstPersonCameraComponent = PCIP.CreateDefaultSubobject<UCameraComponent>(this, TEXT("FirstPersonCamera"));
+	FirstPersonCameraComponent = ObjectInitializer.CreateDefaultSubobject<UCameraComponent>(this, TEXT("FirstPersonCamera"));
 	FirstPersonCameraComponent->AttachParent = GetCapsuleComponent();
 
 	// Move camera to eye position
@@ -28,6 +28,7 @@ void APlayerCharacter::BeginPlay()
 void APlayerCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+
 	// Hide the head mesh in 1st person (we're drawing the visor directly on the screen) 
 	//if (bIsFirstPerson)
 	{
@@ -62,6 +63,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* InputComponent
 
 void APlayerCharacter::MoveForward(float val)
 {
+	// @todo If the player sprints backwards, automatically interp their view to looking behind them
 	if ((Controller != NULL) && (val != 0.0f))
 	{
 		//Which way is forward?
@@ -180,4 +182,9 @@ void APlayerCharacter::OnStartSprint()
 void APlayerCharacter::OnStopSprint()
 {
 	GetCharacterMovement()->MaxWalkSpeed = fWalkSpeed;
+}
+
+void APlayerCharacter::Tick(float DelaySeconds)
+{
+	Super::Tick(DelaySeconds);
 }

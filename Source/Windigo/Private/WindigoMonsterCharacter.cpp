@@ -2,15 +2,3 @@
 
 #include "Windigo.h"
 #include "WindigoMonsterCharacter.h"
-
-void AWindigoMonsterCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
-void AWindigoMonsterCharacter::PostInitializeComponents()
-{
-	Super::PostInitializeComponents();
-}
-
-

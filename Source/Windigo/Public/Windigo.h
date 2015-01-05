@@ -10,6 +10,9 @@ DECLARE_LOG_CATEGORY_EXTERN(WindigoLog, Log, All);
 //Logging during game startup
 DECLARE_LOG_CATEGORY_EXTERN(WindigoInit, Log, All);
 
+//Singleton log
+DECLARE_LOG_CATEGORY_EXTERN(WindigoSingleton, Log, All);
+
 //Logging for Windigo AI system
 DECLARE_LOG_CATEGORY_EXTERN(WindigoAI, Log, All);
 

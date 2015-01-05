@@ -10,6 +10,9 @@ DEFINE_LOG_CATEGORY(WindigoLog);
 //Logging during game startup
 DEFINE_LOG_CATEGORY(WindigoInit);
 
+//Singleton log
+DEFINE_LOG_CATEGORY(WindigoSingleton);
+
 //Logging for Windigo AI system
 DEFINE_LOG_CATEGORY(WindigoAI);
 

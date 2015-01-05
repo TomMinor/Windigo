@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "GameFramework/Character.h"
+#include "WindigoBaseCharacter.h"
 #include "WindigoMonsterCharacter.generated.h"
 
 /* TODO
@@ -15,13 +15,9 @@
  * 
  */
 UCLASS()
-class WINDIGO_API AWindigoMonsterCharacter : public ACharacter
+class WINDIGO_API AWindigoMonsterCharacter : public AWindigoBaseCharacter
 {
 	GENERATED_BODY()
 
-protected:
-	virtual void BeginPlay() override;
-	
-	virtual void PostInitializeComponents() override;
 	
 };
