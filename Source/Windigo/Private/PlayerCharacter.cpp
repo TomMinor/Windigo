@@ -1,8 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.  
+
+
+
+
+
 
 #include "Windigo.h"
 #include "PlayerCharacter.h"
-
 
 APlayerCharacter::APlayerCharacter(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer), fSprintSpeed(600), fWalkSpeed(140)
@@ -18,6 +22,14 @@ APlayerCharacter::APlayerCharacter(const class FObjectInitializer& ObjectInitial
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
 
 	GetCharacterMovement()->MaxWalkSpeed = fWalkSpeed;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = fWalkSpeed * 0.25;
+
+	GetCharacterMovement()->FallingLateralFriction = 10.0f;
+	GetCharacterMovement()->AirControl = 0.1f;
+	GetCharacterMovement()->bMaintainHorizontalGroundVelocity = false; // If false, then walking movement maintains velocity magnitude parallel to the ramp surface.
+
+	bIsSprinting = false;
+	DesiredViewLocation = FVector(0.f, 0.f, 0.f);
 }
 
 void APlayerCharacter::BeginPlay()
@@ -42,8 +54,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* InputComponent
 	InputComponent->BindAxis("MoveForward", this, &APlayerCharacter::MoveForward);
 	InputComponent->BindAxis("MoveRight", this, &APlayerCharacter::MoveRight);
 
-	InputComponent->BindAxis("Yaw", this, &APlayerCharacter::AddControllerYawInput);
-	InputComponent->BindAxis("Pitch", this, &APlayerCharacter::AddControllerPitchInput);
+	InputComponent->BindAxis("Yaw", this, &APlayerCharacter::SmoothCameraYaw);
+	InputComponent->BindAxis("Pitch", this, &APlayerCharacter::SmoothCameraPitch);
 
 
 	// Register key action bindings
@@ -59,7 +71,23 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* InputComponent
 
 	InputComponent->BindAction("Sprint", IE_Pressed, this, &APlayerCharacter::OnStartSprint);
 	InputComponent->BindAction("Sprint", IE_Released, this, &APlayerCharacter::OnStopSprint);
+
+	InputComponent->BindAction("RightClick", IE_Pressed, this, &APlayerCharacter::OnStartRightClick);
+	InputComponent->BindAction("RightClick", IE_Released, this, &APlayerCharacter::OnStopRightClick);
+
+
 }
+
+void APlayerCharacter::OnStartRightClick()
+{
+	UE_LOG(WindigoLog, Log, TEXT("StartRightClick"));
+}
+
+void APlayerCharacter::OnStopRightClick()
+{
+	UE_LOG(WindigoLog, Log, TEXT("StopRightClick"));
+}
+
 
 void APlayerCharacter::MoveForward(float val)
 {
@@ -67,7 +95,7 @@ void APlayerCharacter::MoveForward(float val)
 	if ((Controller != NULL) && (val != 0.0f))
 	{
 		//Which way is forward?
-		FRotator rotation = Controller->GetControlRotation();
+		FRotator rotation = GetViewRotation();
 
 		//Limit pitch during walk/fall
 		if (GetCharacterMovement()->IsMovingOnGround() || GetCharacterMovement()->IsFalling())
@@ -76,7 +104,14 @@ void APlayerCharacter::MoveForward(float val)
 		}
 
 		//Apply movement in the direction we're facing
-		const FVector direction = FRotationMatrix(rotation).GetScaledAxis(EAxis::X);
+		FVector direction = FRotationMatrix(rotation).GetScaledAxis(EAxis::X);
+
+		if (bIsSprinting && val < 0.0f)
+		{
+			//val = FMath::Abs(val);
+			direction = -direction;
+		}
+
 		AddMovementInput(direction, val);
 	}
 }
@@ -86,7 +121,7 @@ void APlayerCharacter::MoveRight(float val)
 	if ((Controller != NULL) && (val != 0.0f))
 	{
 		//Which way is right?
-		const FRotator rotation = Controller->GetControlRotation();
+		const FRotator rotation = GetViewRotation();
 		const FVector direction = FRotationMatrix(rotation).GetScaledAxis(EAxis::Y);
 
 		//Apply movement in that direction
@@ -103,7 +138,7 @@ void APlayerCharacter::AddControllerYawInput(float Val)
 		GEngine->AddOnScreenDebugMessage(255, 1.f, FColor::White, output);
 	}
 
-	Super::AddControllerYawInput(Val);
+	//Super::AddControllerYawInput(Val);
 }
 
 void APlayerCharacter::AddControllerPitchInput(float Val)
@@ -115,7 +150,20 @@ void APlayerCharacter::AddControllerPitchInput(float Val)
 		GEngine->AddOnScreenDebugMessage(256, 1.f, FColor::Yellow, output);
 	}
 
-	Super::AddControllerPitchInput(Val);
+	//Super::AddControllerPitchInput(Val);
+}
+
+void APlayerCharacter::SmoothCameraPitch(float val)
+{
+	FRotator NewRotation = FirstPersonCameraComponent->GetComponentTransform().GetRotation().Rotator();
+
+	GetController()->ClientSetRotation(NewRotation);
+}
+
+void APlayerCharacter::SmoothCameraYaw(float val)
+{
+	float camYaw = FirstPersonCameraComponent->GetComponentTransform().GetRotation().Rotator().Yaw;
+
 }
 
 void APlayerCharacter::OnStartJump()
@@ -176,15 +224,20 @@ void APlayerCharacter::OnShout()
 
 void APlayerCharacter::OnStartSprint()
 {
+	bIsSprinting = true;
 	GetCharacterMovement()->MaxWalkSpeed = fSprintSpeed;
 }
 
 void APlayerCharacter::OnStopSprint()
 {
+	bIsSprinting = false;
 	GetCharacterMovement()->MaxWalkSpeed = fWalkSpeed;
+	bTemp = false;
 }
 
 void APlayerCharacter::Tick(float DelaySeconds)
 {
 	Super::Tick(DelaySeconds);
+
+	
 }

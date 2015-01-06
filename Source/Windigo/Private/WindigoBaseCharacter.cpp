@@ -23,6 +23,7 @@ AWindigoBaseCharacter::AWindigoBaseCharacter(const FObjectInitializer& ObjectIni
 	CharacterSenses->SetPeripheralVisionAngle(85.0f);
 
 	/* Debug Member Defaults */
+	bShouldLogAISenses = false;
 	bDrawLastKnownSound = false;
 	bDrawDecalNormals = false;
 	FootstepLifetime = 32.0f;
@@ -52,9 +53,12 @@ void AWindigoBaseCharacter::PostInitializeComponents()
 
 void AWindigoBaseCharacter::OnHearNoise(APawn *HeardPawn, const FVector &Location, float Volume)
 {
-	const FString VolumeDesc = FString::Printf(TEXT(" at volume %f"), Volume);
-	FString message = GetName() + TEXT(" heard actor ") + HeardPawn->GetName() + VolumeDesc;
-	UE_LOG(WindigoAI, Log, TEXT("%s"), *message);
+	if (bShouldLogAISenses)
+	{
+		const FString VolumeDesc = FString::Printf(TEXT(" at volume %f"), Volume);
+		FString message = GetName() + TEXT(" heard actor ") + HeardPawn->GetName() + VolumeDesc;
+		UE_LOG(WindigoAI, Log, TEXT("%s"), *message);
+	}
 
 	if (bDrawLastKnownSound) 
 	{
@@ -76,8 +80,11 @@ void AWindigoBaseCharacter::OnHearNoise(APawn *HeardPawn, const FVector &Locatio
 
 void AWindigoBaseCharacter::OnSeePawn(APawn *SeenPawn)
 {
-	FString message = GetName() + TEXT(" spotted Actor ") + SeenPawn->GetName();
-	UE_LOG(WindigoAI, Log, TEXT("%s"), *message);
+	if (bShouldLogAISenses)
+	{
+		FString message = GetName() + TEXT(" spotted Actor ") + SeenPawn->GetName();
+		UE_LOG(WindigoAI, Log, TEXT("%s"), *message);
+	}
 }
 
 // http://javierramello.com/index.php/tutorials/50-unreal-engine-4-hit-surface-detection
@@ -141,43 +148,21 @@ TWeakObjectPtr<class UPhysicalMaterial> AWindigoBaseCharacter::GetGroundPhysMate
 	AActor*	HitActor = HitResult.GetActor();
 	if (HitActor)
 	{
-		if (HitActor->IsA(AStaticMeshActor::StaticClass()))
-		{
-			UE_LOG(WindigoLog, Log, TEXT("Trace hit static mesh : %s"), *HitActor->GetName());
-		}
-		else if (HitActor->IsA(ALandscape::StaticClass()))
-		{
-			UE_LOG(WindigoLog, Log, TEXT("Trace hit landscape : %s"), *HitActor->GetName());
-		}
+#if UE_BUILD_DEBUG
+		//if (HitActor->IsA(AStaticMeshActor::StaticClass()))
+		//{
+		//	UE_LOG(WindigoLog, Log, TEXT("Trace hit static mesh : %s"), *HitActor->GetName());
+		//}
+		//else if (HitActor->IsA(ALandscape::StaticClass()))
+		//{
+		//	UE_LOG(WindigoLog, Log, TEXT("Trace hit landscape : %s"), *HitActor->GetName());
+		//}
+#endif
 
 		PhysicalMaterial = HitResult.PhysMaterial;
 	}
 
 	return PhysicalMaterial;
-
-	//if (HitResult.Component.IsValid())
-	//{
-	//	UE_LOG(WindigoLog, Log, TEXT("Hit name %s"), *HitResult.Component.Get()->GetName());
-
-	//	const ULandscapeHeightfieldCollisionComponent* LandscapeCollisionComponent = Cast<ULandscapeHeightfieldCollisionComponent>(HitResult.Component.Get());
-	//	if (LandscapeCollisionComponent) /* Getting the phys material of a LandscapeMaterial is a special case */
-	//	{
-	//		ALandscape* LandscapeProxy = LandscapeCollisionComponent->GetLandscapeActor();
-	//		if (LandscapeProxy)
-	//		{
-	//			UMaterialInterface* LandscapeMaterial = LandscapeProxy->GetLandscapeMaterial();
-	//			if (LandscapeMaterial)
-	//			{
-	//				MaterialResult = LandscapeMaterial->GetMaterial();
-	//			}
-	//		}
-	//	}
-	//	else if (HitResult.Component->GetNumMaterials() > 0)
-	//	{
-	//		MaterialResult = HitResult.Component.Get()->GetMaterial(0);
-	//	}
-	//
-	//}
 }
 
 FHitResult AWindigoBaseCharacter::TraceGround(const FVector& Location, bool bDrawTrace) const
@@ -185,7 +170,7 @@ FHitResult AWindigoBaseCharacter::TraceGround(const FVector& Location, bool bDra
 	const float VerticalTraceDistance = 128;
 
 	FCollisionQueryParams TraceParams( FName(TEXT("TraceGround")), false, GetOwner() );
-	TraceParams.bTraceComplex = false;
+	TraceParams.bTraceComplex = true;
 	TraceParams.bReturnPhysicalMaterial = true;
 
 	FHitResult HitResult(ForceInit);
@@ -205,14 +190,6 @@ FHitResult AWindigoBaseCharacter::TraceGround(const FVector& Location, bool bDra
 USoundCue* AWindigoBaseCharacter::GetRandomFootstepSound(EPhysicalSurface PhysicalSurface) const
 {
 	USoundCue* FootstepSound = NULL;
-
-	//const TWeakObjectPtr<class UPhysicalMaterial> PhysicalMaterial = GetGroundPhysMaterial();
-
-	//if (PhysicalMaterial.IsValid())
-	//{
-	//	EPhysicalSurface SurfaceIndex = UPhysicalMaterial::DetermineSurfaceType(PhysicalMaterial.Get());
-
-	//UE_LOG(WindigoLog, Log, TEXT("Phys Material : %s > SurfaceType%d"), *PhysicalMaterial->GetName(), (int32)SurfaceIndex);
 
 	if (FootstepInfo)
 	{
@@ -266,7 +243,7 @@ UParticleSystem* AWindigoBaseCharacter::GetRandomFootstepParticle(EPhysicalSurfa
 	}
 	else /* No FootstepInfo instance*/
 	{
-		UE_LOG(WindigoLog, Error, TEXT("GetRandomFootstep: Can't access Footstep Info"));
+		UE_LOG(WindigoLog, Error, TEXT("GetRandomFootstep: Can't access Footstep Properties"));
 	}
 
 	return FootstepFX;
@@ -296,7 +273,7 @@ UMaterial* AWindigoBaseCharacter::GetRandomFootstepDecal(EPhysicalSurface Physic
 	}
 	else /* No FootstepInfo instance*/
 	{
-		UE_LOG(WindigoLog, Error, TEXT("GetRandomFootstep: Can't access Footstep Info"));
+		UE_LOG(WindigoLog, Error, TEXT("GetRandomFootstep: Can't access Footstep Properties"));
 	}
 
 	return FootstepDecal;

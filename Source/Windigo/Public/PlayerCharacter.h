@@ -52,6 +52,16 @@ public:
 	void OnShoutEvent();
 
 protected:
+	/////////////////////* Input Booleans *//////////////////////
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement")
+	bool bIsSprinting;
+
+	FVector DesiredViewLocation;
+
+protected:
+	/////////////////////* Methods *//////////////////////
+
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
 	virtual void Landed(const FHitResult& Hit) override;
@@ -59,6 +69,12 @@ protected:
 	// Limit mouse input
 	virtual void AddControllerYawInput(float Val) override;
 	virtual void AddControllerPitchInput(float Val) override;
+
+	virtual void SmoothCameraPitch(float val);
+	virtual void SmoothCameraYaw(float val);
+
+	virtual void OnStartRightClick();
+	virtual void OnStopRightClick();
 
 	//Handle forward/backward movement
 	UFUNCTION()

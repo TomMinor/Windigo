@@ -47,10 +47,6 @@ protected:
 
 	virtual void CreateNoise(const FVector& Location);
 
-	//virtual void CreateFootstepSound(const FVector& Location, UAudioComponent* FootstepAudioComponent);
-
-	//virtual void CreateFootstepDecal(const FVector& Location, UAudioComponent* FootstepAudioComponent);
-
 	virtual FHitResult TraceGround(const FVector& Location, bool bDrawTrace = false) const;
 
 	virtual TWeakObjectPtr<class UPhysicalMaterial> GetGroundPhysMaterial(const FHitResult& HitResult) const;
@@ -83,6 +79,10 @@ protected:
 
 	//////////////////////////////////////////////////////////////////////////
 	/* Debug members */
+
+	/* Should we log when characters see/hear each other */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Awareness | Debug")
+	bool bShouldLogAISenses;
 
 	/* Draw hearing ranges of the character and draw any sounds that the character hears */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Awareness | Debug")
