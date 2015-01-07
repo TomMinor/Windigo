@@ -1,25 +1,35 @@
 // Fill out your copyright notice in the Description page of Project Settings.  
 
-
-
-
-
-
 #include "Windigo.h"
 #include "PlayerCharacter.h"
+
+
+// CVars
+static TAutoConsoleVariable<int32> CVarCameraInterpSpeed(
+	TEXT("WindigoCharacter.CameraInterpSpeed"),
+	64.0f,
+	TEXT("How quickly the camera will smoothly change to the desired camera view\n"),
+	ECVF_Cheat);
+
+static TAutoConsoleVariable<int32> CVarActorInterpSpeed(
+	TEXT("WindigoCharacter.ActorInterpSpeed"),
+	32.0f,
+	TEXT("How quickly the actor will smoothly change to the desired rotation\n"),
+	ECVF_Cheat);
+
 
 APlayerCharacter::APlayerCharacter(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer), fSprintSpeed(600), fWalkSpeed(140)
 {
 	// Create CameraComponent
 	FirstPersonCameraComponent = ObjectInitializer.CreateDefaultSubobject<UCameraComponent>(this, TEXT("FirstPersonCamera"));
-	FirstPersonCameraComponent->AttachParent = GetCapsuleComponent();
+	//FirstPersonCameraComponent->AttachParent = GetCapsuleComponent();
 
 	// Move camera to eye position
 	FirstPersonCameraComponent->RelativeLocation = FVector(16.f, 4.f, BaseEyeHeight + 20.f);
 
 	// Allow pawn to control rotation of camera
-	FirstPersonCameraComponent->bUsePawnControlRotation = true;
+	FirstPersonCameraComponent->bUsePawnControlRotation = false;
 
 	GetCharacterMovement()->MaxWalkSpeed = fWalkSpeed;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = fWalkSpeed * 0.25;
@@ -29,7 +39,9 @@ APlayerCharacter::APlayerCharacter(const class FObjectInitializer& ObjectInitial
 	GetCharacterMovement()->bMaintainHorizontalGroundVelocity = false; // If false, then walking movement maintains velocity magnitude parallel to the ramp surface.
 
 	bIsSprinting = false;
-	DesiredViewLocation = FVector(0.f, 0.f, 0.f);
+	bRightClick = false;
+
+	DesiredActorRotation = DesiredViewRotation = FirstPersonCameraComponent->GetComponentRotation();
 }
 
 void APlayerCharacter::BeginPlay()
@@ -54,9 +66,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* InputComponent
 	InputComponent->BindAxis("MoveForward", this, &APlayerCharacter::MoveForward);
 	InputComponent->BindAxis("MoveRight", this, &APlayerCharacter::MoveRight);
 
-	InputComponent->BindAxis("Yaw", this, &APlayerCharacter::SmoothCameraYaw);
-	InputComponent->BindAxis("Pitch", this, &APlayerCharacter::SmoothCameraPitch);
-
+	InputComponent->BindAxis("Yaw", this, &APlayerCharacter::ViewYaw);
+	InputComponent->BindAxis("Pitch", this, &APlayerCharacter::ViewPitch);
 
 	// Register key action bindings
 	InputComponent->BindAction("Jump", IE_Pressed, this, &APlayerCharacter::OnStartJump);
@@ -74,18 +85,16 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* InputComponent
 
 	InputComponent->BindAction("RightClick", IE_Pressed, this, &APlayerCharacter::OnStartRightClick);
 	InputComponent->BindAction("RightClick", IE_Released, this, &APlayerCharacter::OnStopRightClick);
-
-
 }
 
 void APlayerCharacter::OnStartRightClick()
 {
-	UE_LOG(WindigoLog, Log, TEXT("StartRightClick"));
+	bRightClick = true;
 }
 
 void APlayerCharacter::OnStopRightClick()
 {
-	UE_LOG(WindigoLog, Log, TEXT("StopRightClick"));
+	bRightClick = false;
 }
 
 
@@ -106,11 +115,11 @@ void APlayerCharacter::MoveForward(float val)
 		//Apply movement in the direction we're facing
 		FVector direction = FRotationMatrix(rotation).GetScaledAxis(EAxis::X);
 
-		if (bIsSprinting && val < 0.0f)
-		{
-			//val = FMath::Abs(val);
-			direction = -direction;
-		}
+		//if (bIsSprinting && val < 0.0f)
+		//{
+		//	//val = FMath::Abs(val);
+		//	direction = -direction;
+		//}
 
 		AddMovementInput(direction, val);
 	}
@@ -129,7 +138,7 @@ void APlayerCharacter::MoveRight(float val)
 	}
 }
 
-void APlayerCharacter::AddControllerYawInput(float Val)
+void APlayerCharacter::ViewYaw(float Val)
 {
 	float camYaw = FirstPersonCameraComponent->GetComponentTransform().GetRotation().Rotator().Yaw;
 	if (GEngine)
@@ -138,10 +147,41 @@ void APlayerCharacter::AddControllerYawInput(float Val)
 		GEngine->AddOnScreenDebugMessage(255, 1.f, FColor::White, output);
 	}
 
+	if (!FMath::IsNearlyZero(Val))
+	{
+		FRotator CamRotation = FirstPersonCameraComponent->GetComponentRotation();
+		if (bRightClick)
+		{
+			//CamRotation.Yaw += Val;
+			//DesiredViewRotation = GetActorRotation() + FRotator(0.f, 180.f, 0.f);
+
+			if (bIsSprinting && GetMovementComponent()->IsMovingOnGround()) /* Move camera separately from body while running */
+			{
+
+			}
+			else /* Cover mode */
+			{
+
+			}
+		}
+		else /* Walking/sprinting normally */
+		{
+			/*CamRotation.Yaw += Val / 2.0;
+			GetController()->ClientSetRotation(CamRotation);
+			DesiredViewRotation = CamRotation;*/
+
+			DesiredViewRotation.Yaw += Val;
+			DesiredActorRotation.Yaw += Val;
+		}
+	}
+
+	//FirstPersonCameraComponent->SetWorldRotation(CamRotation);
+	//DesiredViewRotation = CamRotation;
+	
 	//Super::AddControllerYawInput(Val);
 }
 
-void APlayerCharacter::AddControllerPitchInput(float Val)
+void APlayerCharacter::ViewPitch(float Val)
 {
 	float camPitch = FirstPersonCameraComponent->GetComponentTransform().GetRotation().Rotator().Pitch;
 	if (GEngine)
@@ -150,20 +190,27 @@ void APlayerCharacter::AddControllerPitchInput(float Val)
 		GEngine->AddOnScreenDebugMessage(256, 1.f, FColor::Yellow, output);
 	}
 
-	//Super::AddControllerPitchInput(Val);
+	if (!FMath::IsNearlyZero(Val))
+	{
+		FRotator CamRotation = FirstPersonCameraComponent->GetComponentRotation();
+		CamRotation.Pitch -= Val;
+
+		//DesiredViewRotation = CamRotation;
+		DesiredViewRotation.Pitch -= Val;
+		DesiredActorRotation.Pitch -= Val;
+		//GetController()->ClientSetRotation(CamRotation);
+
+		//	Super::AddControllerPitchInput(Val);
+	}
 }
 
 void APlayerCharacter::SmoothCameraPitch(float val)
 {
-	FRotator NewRotation = FirstPersonCameraComponent->GetComponentTransform().GetRotation().Rotator();
 
-	GetController()->ClientSetRotation(NewRotation);
 }
 
 void APlayerCharacter::SmoothCameraYaw(float val)
 {
-	float camYaw = FirstPersonCameraComponent->GetComponentTransform().GetRotation().Rotator().Yaw;
-
 }
 
 void APlayerCharacter::OnStartJump()
@@ -232,12 +279,33 @@ void APlayerCharacter::OnStopSprint()
 {
 	bIsSprinting = false;
 	GetCharacterMovement()->MaxWalkSpeed = fWalkSpeed;
-	bTemp = false;
 }
 
-void APlayerCharacter::Tick(float DelaySeconds)
+void APlayerCharacter::Tick(float DeltaTime)
 {
-	Super::Tick(DelaySeconds);
+	Super::Tick(DeltaTime);
 
+	const float CamInterpSpeed = CVarCameraInterpSpeed.GetValueOnGameThread();
+	const FRotator FPSCamRotation = FMath::RInterpTo(FirstPersonCameraComponent->GetComponentRotation(), DesiredViewRotation, DeltaTime, CamInterpSpeed);
+	FirstPersonCameraComponent->SetWorldRotation(FPSCamRotation);
 	
+	const float ActorInterpSpeed = CVarActorInterpSpeed.GetValueOnGameThread();
+	const FRotator ActorRotation = FMath::RInterpTo(GetActorRotation(), DesiredActorRotation, DeltaTime, ActorInterpSpeed);
+	ClientSetRotation(ActorRotation);
+
+	if (GEngine)
+	{
+		FString output = FString::Printf(TEXT("Desired = %f %f %f"), DesiredViewRotation.Pitch, DesiredViewRotation.Yaw, DesiredViewRotation.Roll);
+		GEngine->AddOnScreenDebugMessage(235, 1.f, FColor::White, output);
+
+		output = FString::Printf(TEXT("Desired = %f %f %f"), ActorRotation.Pitch, ActorRotation.Yaw, ActorRotation.Roll);
+		GEngine->AddOnScreenDebugMessage(235, 1.f, FColor::White, output);
+	}
+}
+
+
+
+void APlayerCharacter::TestCommand(float val)
+{
+	UE_LOG(WindigoLog, Log, TEXT("OUTPUT TEST %f"), val);
 }

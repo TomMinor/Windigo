@@ -57,9 +57,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement")
 	bool bIsSprinting;
 
-	FVector DesiredViewLocation;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement")
+	bool bRightClick;
+
+	/* The camera rotation we should interpolate towards (every tick) */
+	FRotator DesiredViewRotation;
+
+	/* The actor rotation we should interpolate towards (every tick) */
+	FRotator DesiredActorRotation;
 
 protected:
+	/////////////////////* Commands *//////////////////////
+
+	UFUNCTION(exec)
+	virtual void TestCommand(float val);
+
 	/////////////////////* Methods *//////////////////////
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
@@ -67,8 +79,8 @@ protected:
 	virtual void Landed(const FHitResult& Hit) override;
 
 	// Limit mouse input
-	virtual void AddControllerYawInput(float Val) override;
-	virtual void AddControllerPitchInput(float Val) override;
+	virtual void ViewYaw(float Val);
+	virtual void ViewPitch(float Val);
 
 	virtual void SmoothCameraPitch(float val);
 	virtual void SmoothCameraYaw(float val);
@@ -111,5 +123,5 @@ protected:
 	UFUNCTION()
 	void OnShout();
 
-	void Tick(float DelaySeconds) override;
+	void Tick(float DeltaTime) override;
 };
