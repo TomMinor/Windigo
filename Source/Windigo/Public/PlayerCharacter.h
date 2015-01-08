@@ -35,6 +35,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	UCameraComponent* FirstPersonCameraComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+	USpringArmComponent* LeanCameraBoom;
+
 	/** How fast does the player move when they Sprint? */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement")
 	float fSprintSpeed;
@@ -60,11 +63,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement")
 	bool bRightClick;
 
+	float InitialMeshYaw;
+
 	/* The camera rotation we should interpolate towards (every tick) */
 	FRotator DesiredViewRotation;
+	FVector DesiredViewLocation;
 
 	/* The actor rotation we should interpolate towards (every tick) */
 	FRotator DesiredActorRotation;
+
+	FVector DesiredBoomTargetLocation;
 
 protected:
 	/////////////////////* Commands *//////////////////////
@@ -81,9 +89,6 @@ protected:
 	// Limit mouse input
 	virtual void ViewYaw(float Val);
 	virtual void ViewPitch(float Val);
-
-	virtual void SmoothCameraPitch(float val);
-	virtual void SmoothCameraYaw(float val);
 
 	virtual void OnStartRightClick();
 	virtual void OnStopRightClick();

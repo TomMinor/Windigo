@@ -31,6 +31,16 @@ APlayerCharacter::APlayerCharacter(const class FObjectInitializer& ObjectInitial
 	// Allow pawn to control rotation of camera
 	FirstPersonCameraComponent->bUsePawnControlRotation = false;
 
+	LeanCameraBoom = ObjectInitializer.CreateDefaultSubobject<USpringArmComponent>(this, TEXT("LeanCameraBoom"));
+	LeanCameraBoom->AttachTo(RootComponent);
+	LeanCameraBoom->TargetArmLength = 10.0f; // The camera follows at this distance behind the character	
+	LeanCameraBoom->bUsePawnControlRotation = false; // Rotate the arm based on the controller
+	//LeanCameraBoom->SetAbsolute(false, true);
+
+	DesiredBoomTargetLocation = LeanCameraBoom->TargetOffset;
+
+	FirstPersonCameraComponent->AttachTo(LeanCameraBoom, USpringArmComponent::SocketName);
+
 	GetCharacterMovement()->MaxWalkSpeed = fWalkSpeed;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = fWalkSpeed * 0.25;
 
@@ -41,7 +51,11 @@ APlayerCharacter::APlayerCharacter(const class FObjectInitializer& ObjectInitial
 	bIsSprinting = false;
 	bRightClick = false;
 
-	DesiredActorRotation = DesiredViewRotation = FirstPersonCameraComponent->GetComponentRotation();
+	DesiredActorRotation = FirstPersonCameraComponent->GetComponentRotation();
+	DesiredViewRotation = DesiredActorRotation;
+	DesiredViewLocation = FirstPersonCameraComponent->GetComponentLocation();
+
+	InitialMeshYaw = 0.0f;
 }
 
 void APlayerCharacter::BeginPlay()
@@ -58,6 +72,18 @@ void APlayerCharacter::PostInitializeComponents()
 	{
 		GetMesh()->HideBoneByName(TEXT("head"), PBO_None);
 	}
+
+	if (GetMesh()->DoesSocketExist(FName("cameraView")))
+	{
+		FVector HeadPosition;
+		FRotator HeadRotation;
+		GetMesh()->GetSocketWorldLocationAndRotation(FName("cameraView"), HeadPosition, HeadRotation);
+		FirstPersonCameraComponent->SetWorldLocation(HeadPosition);
+	}
+
+	DesiredViewLocation = FirstPersonCameraComponent->GetComponentLocation();
+
+	InitialMeshYaw = GetMesh()->GetComponentRotation().Yaw;
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* InputComponent)
@@ -95,6 +121,7 @@ void APlayerCharacter::OnStartRightClick()
 void APlayerCharacter::OnStopRightClick()
 {
 	bRightClick = false;
+	ViewYaw(0.0f); /* Force the yaw code to reset the camera position */
 }
 
 
@@ -103,6 +130,7 @@ void APlayerCharacter::MoveForward(float val)
 	// @todo If the player sprints backwards, automatically interp their view to looking behind them
 	if ((Controller != NULL) && (val != 0.0f))
 	{
+		FName SocketName("cameraView");
 		//Which way is forward?
 		FRotator rotation = GetViewRotation();
 
@@ -110,16 +138,33 @@ void APlayerCharacter::MoveForward(float val)
 		if (GetCharacterMovement()->IsMovingOnGround() || GetCharacterMovement()->IsFalling())
 		{
 			rotation.Pitch = 0.0f;
+
+			//if (GetMesh()->DoesSocketExist(SocketName))
+			//{
+			//	FVector HeadPosition;
+			//	FRotator HeadRotation;
+			//	GetMesh()->GetSocketWorldLocationAndRotation(SocketName, HeadPosition, HeadRotation);
+			//	HeadRotation.Roll = FirstPersonCameraComponent->GetComponentRotation().Roll;
+			//	HeadPosition.X = GetActorLocation().X;
+			//	HeadPosition.Y = GetActorLocation().Y;
+
+			//	/*DesiredViewRotation = HeadRotation;
+			//	DesiredViewLocation = HeadPosition;*/
+
+			//	if (GEngine)
+			//	{
+			//		FString output = FString::Printf(TEXT("Desired Location = %f %f %f"), DesiredViewLocation.X, DesiredViewLocation.Y, DesiredViewLocation.Z);
+			//		GEngine->AddOnScreenDebugMessage(235, 1.f, FColor::White, output);
+
+			//		const FVector a = HeadPosition;
+			//			output = FString::Printf(TEXT("Actual Location = %f %f %f"), a.X, a.Y, a.Z);
+			//		GEngine->AddOnScreenDebugMessage(234, 1.f, FColor::White, output);
+			//	}
+			//}
 		}
 
 		//Apply movement in the direction we're facing
 		FVector direction = FRotationMatrix(rotation).GetScaledAxis(EAxis::X);
-
-		//if (bIsSprinting && val < 0.0f)
-		//{
-		//	//val = FMath::Abs(val);
-		//	direction = -direction;
-		//}
 
 		AddMovementInput(direction, val);
 	}
@@ -147,37 +192,49 @@ void APlayerCharacter::ViewYaw(float Val)
 		GEngine->AddOnScreenDebugMessage(255, 1.f, FColor::White, output);
 	}
 
-	if (!FMath::IsNearlyZero(Val))
+	//@todo extend capsule so windigo can see us?
+	if (bRightClick)
 	{
-		FRotator CamRotation = FirstPersonCameraComponent->GetComponentRotation();
-		if (bRightClick)
+		if (bIsSprinting && GetMovementComponent()->IsMovingOnGround()) /* Move camera separately from body while running */
 		{
-			//CamRotation.Yaw += Val;
-			//DesiredViewRotation = GetActorRotation() + FRotator(0.f, 180.f, 0.f);
-
-			if (bIsSprinting && GetMovementComponent()->IsMovingOnGround()) /* Move camera separately from body while running */
-			{
-
-			}
-			else /* Cover mode */
-			{
-
-			}
-		}
-		else /* Walking/sprinting normally */
-		{
-			/*CamRotation.Yaw += Val / 2.0;
-			GetController()->ClientSetRotation(CamRotation);
-			DesiredViewRotation = CamRotation;*/
-
+			/* Change just the cam yaw without affecting the rotation of the actor's mesh */
 			DesiredViewRotation.Yaw += Val;
-			DesiredActorRotation.Yaw += Val;
+		}
+		else if (!FMath::IsNearlyZero(Val) ) /* Cover mode */
+		{
+			const float MaxLean = 64.f;
+			const float LeanRollInterp = 2.0f;
+
+			/* We need to invert the value */
+			const float YOffset = -Val;																 
+			/* Fix rotation to look forward */
+			const float Yaw = InitialMeshYaw + FirstPersonCameraComponent->GetComponentRotation().Yaw;
+			/* Are we learning right or left? */
+			const float RollRotation = (YOffset < 0.0f) ? 5.f : -5.f;									 
+
+			const FVector Offset = FVector(YOffset * FMath::Cos(FMath::DegreesToRadians(Yaw)),
+										   YOffset * FMath::Sin(FMath::DegreesToRadians(Yaw)),
+										   0.f);
+			const FVector ExpectedTargetLocation = DesiredBoomTargetLocation + Offset;
+
+			/* Only allow leaning if we aren't expecting to go above the lean limit */
+			if (ExpectedTargetLocation.Size() < MaxLean)
+			{
+				DesiredBoomTargetLocation += Offset;
+				DesiredViewRotation.Roll = FMath::FInterpTo(DesiredViewRotation.Roll, RollRotation, GetWorld()->GetDeltaSeconds(), LeanRollInterp);
+			}
 		}
 	}
+	else /* Walking/sprinting normally */
+	{
+		/* Interp back to no roll or boom offset when we release the rmb */
+		DesiredBoomTargetLocation = FVector(0.f, 0.f, 0.f);
+		DesiredViewRotation.Roll = 0;       
 
-	//FirstPersonCameraComponent->SetWorldRotation(CamRotation);
-	//DesiredViewRotation = CamRotation;
-	
+		/* Update desired view rotation */
+		DesiredViewRotation.Yaw += Val;
+		DesiredActorRotation.Yaw += Val;
+	}
 	//Super::AddControllerYawInput(Val);
 }
 
@@ -192,25 +249,16 @@ void APlayerCharacter::ViewPitch(float Val)
 
 	if (!FMath::IsNearlyZero(Val))
 	{
-		FRotator CamRotation = FirstPersonCameraComponent->GetComponentRotation();
-		CamRotation.Pitch -= Val;
+		//FRotator CamRotation = FirstPersonCameraComponent->GetComponentRotation();
+		//CamRotation.Pitch -= Val;
 
 		//DesiredViewRotation = CamRotation;
 		DesiredViewRotation.Pitch -= Val;
-		DesiredActorRotation.Pitch -= Val;
+		//DesiredActorRotation.Pitch -= Val;
 		//GetController()->ClientSetRotation(CamRotation);
 
 		//	Super::AddControllerPitchInput(Val);
 	}
-}
-
-void APlayerCharacter::SmoothCameraPitch(float val)
-{
-
-}
-
-void APlayerCharacter::SmoothCameraYaw(float val)
-{
 }
 
 void APlayerCharacter::OnStartJump()
@@ -285,6 +333,8 @@ void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	//LeanCameraBoom->SetWorldRotation(FirstPersonCameraComponent->GetComponentRotation());
+
 	const float CamInterpSpeed = CVarCameraInterpSpeed.GetValueOnGameThread();
 	const FRotator FPSCamRotation = FMath::RInterpTo(FirstPersonCameraComponent->GetComponentRotation(), DesiredViewRotation, DeltaTime, CamInterpSpeed);
 	FirstPersonCameraComponent->SetWorldRotation(FPSCamRotation);
@@ -293,14 +343,41 @@ void APlayerCharacter::Tick(float DeltaTime)
 	const FRotator ActorRotation = FMath::RInterpTo(GetActorRotation(), DesiredActorRotation, DeltaTime, ActorInterpSpeed);
 	ClientSetRotation(ActorRotation);
 
-	if (GEngine)
-	{
-		FString output = FString::Printf(TEXT("Desired = %f %f %f"), DesiredViewRotation.Pitch, DesiredViewRotation.Yaw, DesiredViewRotation.Roll);
-		GEngine->AddOnScreenDebugMessage(235, 1.f, FColor::White, output);
+	const float BoomInterpSpeed = 8.f;
+	const FVector BoomTargetLocation = FMath::VInterpTo(LeanCameraBoom->TargetOffset, DesiredBoomTargetLocation, DeltaTime, BoomInterpSpeed);
+	LeanCameraBoom->TargetOffset = BoomTargetLocation;
 
-		output = FString::Printf(TEXT("Desired = %f %f %f"), ActorRotation.Pitch, ActorRotation.Yaw, ActorRotation.Roll);
-		GEngine->AddOnScreenDebugMessage(235, 1.f, FColor::White, output);
-	}
+	//if (bIsSprinting)
+	//{
+	//	FVector HeadPosition;
+	//	if (GetMesh()->DoesSocketExist(FName("cameraView")))
+	//	{
+	//		
+	//		FRotator HeadRotation;
+	//		GetMesh()->GetSocketWorldLocationAndRotation(FName("cameraView"), HeadPosition, HeadRotation);
+	//		HeadRotation.Roll = FirstPersonCameraComponent->GetComponentRotation().Roll;
+	//		HeadPosition.X = GetActorLocation().X;
+	//		HeadPosition.Y = GetActorLocation().Y;
+
+	//		/*HeadPosition = */
+
+	//		//DesiredViewRotation = HeadRotation;
+	//	}
+
+	//	const float CameraLocationInterpSpeed = 2.f;
+	//	const FVector CameraLocation = FMath::VInterpTo(FirstPersonCameraComponent->GetComponentLocation(), DesiredViewLocation, DeltaTime, CameraLocationInterpSpeed);
+	//	FirstPersonCameraComponent->SetWorldLocation(CameraLocation);
+
+	//	if (GEngine)
+	//	{
+	//		FString output = FString::Printf(TEXT("Desired Location = %f %f %f"), DesiredViewLocation.X, DesiredViewLocation.Y, DesiredViewLocation.Z);
+	//		GEngine->AddOnScreenDebugMessage(235, 1.f, FColor::White, output);
+
+	//		const FVector a = HeadPosition;
+	//		output = FString::Printf(TEXT("Actual Location = %f %f %f"), a.X, a.Y, a.Z);
+	//		GEngine->AddOnScreenDebugMessage(234, 1.f, FColor::White, output);
+	//	}
+	//}
 }
 
 
