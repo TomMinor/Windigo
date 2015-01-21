@@ -29,6 +29,7 @@ static TAutoConsoleVariable<int32> CVarCameraRollInterpSpeed(
 	TEXT("How quickly the camera roll will interpolate\n"),
 	ECVF_Cheat);
 
+<<<<<<< HEAD
 static TAutoConsoleVariable<int32> CVarCameraMaxRoll(
 	TEXT("WindigoCharacter.CameraMaxLeanRoll"),
 	5.0f,
@@ -52,6 +53,7 @@ static TAutoConsoleVariable<int32> CVarCameraMinPeakHeight(
 	-0.5f,
 	TEXT("The minimum distance the player can lean up.\n"),
 	ECVF_Cheat);
+=======
 
 APlayerCharacter::APlayerCharacter(const class FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer), fSprintSpeed(600), fWalkSpeed(140)
@@ -350,10 +352,11 @@ void APlayerCharacter::ViewPitch(float Val)
 		else if (!FMath::IsNearlyZero(Val)) /* Cover mode peak - Can only peak up, not down */
 		{
 			const float ZOffset = -Val;		/* We need to invert the value */
+
 			//@todo Make these UPROPERTY
 			const float MaxPeakHeight = CVarCameraMaxPeakHeight.GetValueOnGameThread();
 			const float MinPeakHeight = CVarCameraMinPeakHeight.GetValueOnGameThread();
-
+			
 			const FVector Offset = FVector(0.f, 0.f, ZOffset);
 			const FVector ExpectedTargetLocation = DesiredBoomTargetLocation + Offset;
 
@@ -486,6 +489,24 @@ void APlayerCharacter::Tick(float DeltaTime)
 	const float ActorInterpSpeed = CVarActorInterpSpeed.GetValueOnGameThread();
 	const FRotator ActorRotation = FMath::RInterpTo(GetActorRotation(), DesiredActorRotation, DeltaTime, ActorInterpSpeed);
 	ClientSetRotation(ActorRotation);
+
+	const float BoomInterpSpeed = CVarBoomInterpSpeed.GetValueOnGameThread();
+	const FVector BoomTargetLocation = FMath::VInterpTo(LeanCameraBoom->TargetOffset, DesiredBoomTargetLocation, DeltaTime, BoomInterpSpeed);
+	LeanCameraBoom->TargetOffset = BoomTargetLocation;
+
+	//if (bIsSprinting)
+	//{
+	//	FVector HeadPosition;
+	//	if (GetMesh()->DoesSocketExist(FName("cameraView")))
+	//	{
+	//		
+	//		FRotator HeadRotation;
+	//		GetMesh()->GetSocketWorldLocationAndRotation(FName("cameraView"), HeadPosition, HeadRotation);
+	//		HeadRotation.Roll = FirstPersonCameraComponent->GetComponentRotation().Roll;
+	//		HeadPosition.X = GetActorLocation().X;
+	//		HeadPosition.Y = GetActorLocation().Y;
+
+	//		/*HeadPosition = */
 
 
 	FVector HeadPosition;
