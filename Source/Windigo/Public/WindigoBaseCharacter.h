@@ -37,6 +37,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Events, meta = (FriendlyName = "Simulate Right Footstep"))
 	virtual void SimulateRightFootstep();
 
+	UFUNCTION(BlueprintImplementableEvent, Category = Events, meta = (FriendlyName = "Right Footstep"))
+	virtual void OnRightFootstepEvent();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = Events, meta = (FriendlyName = "Left Footstep"))
+	virtual void OnLeftFootstepEvent();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = Events, meta = (FriendlyName = "SeePlayer"))
+	virtual void OnSeePlayer(const FVector& Location, float Distance);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = Events, meta = (FriendlyName = "HearPlayer"))
+	virtual void OnHearPlayer(const FVector& Location, float Distance);
+
 protected:
 	/* Functions */
 	virtual void BeginPlay() override;

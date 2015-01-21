@@ -55,32 +55,33 @@ public:
 	void OnShoutEvent();
 
 protected:
-	/////////////////////* Input Booleans *//////////////////////
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement")
+	/////////////////////* Input *//////////////////////
+	bool bSetToActorRotation;
 	bool bIsSprinting;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement")
 	bool bRightClick;
+	bool bIsCrouching;
 
+	FName HeadSocket;
+
+	/* We need this to figure out the default rotation for the mesh (to orient the camera properly) */
 	float InitialMeshYaw;
 
 	/* The camera rotation we should interpolate towards (every tick) */
 	FRotator DesiredViewRotation;
+
+	/* The camera location we should interpolate towards (every tick) */
 	FVector DesiredViewLocation;
 
 	/* The actor rotation we should interpolate towards (every tick) */
 	FRotator DesiredActorRotation;
 
+	/* The boom target location we should interpolate towards (every tick) */
 	FVector DesiredBoomTargetLocation;
 
 protected:
-	/////////////////////* Commands *//////////////////////
-
-	UFUNCTION(exec)
-	virtual void TestCommand(float val);
-
 	/////////////////////* Methods *//////////////////////
+
+	
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 

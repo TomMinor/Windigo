@@ -76,6 +76,12 @@ void AWindigoBaseCharacter::OnHearNoise(APawn *HeardPawn, const FVector &Locatio
 			SoundHearingLifetime,
 			0);
 	}
+
+
+	const FVector PlayerLocation = HeardPawn->GetActorLocation();
+	const float Distance = (PlayerLocation- GetActorLocation()).Size();
+
+	OnSeePlayer(PlayerLocation, Distance);
 }
 
 void AWindigoBaseCharacter::OnSeePawn(APawn *SeenPawn)
@@ -85,6 +91,11 @@ void AWindigoBaseCharacter::OnSeePawn(APawn *SeenPawn)
 		FString message = GetName() + TEXT(" spotted Actor ") + SeenPawn->GetName();
 		UE_LOG(WindigoAI, Log, TEXT("%s"), *message);
 	}
+
+	const FVector PlayerLocation = SeenPawn->GetActorLocation();
+	const float Distance = (PlayerLocation - GetActorLocation()).Size();
+
+	OnSeePlayer(PlayerLocation, Distance);
 }
 
 // http://javierramello.com/index.php/tutorials/50-unreal-engine-4-hit-surface-detection
@@ -282,11 +293,13 @@ UMaterial* AWindigoBaseCharacter::GetRandomFootstepDecal(EPhysicalSurface Physic
 void AWindigoBaseCharacter::SimulateLeftFootstep()
 {
 	CreateFootstep(FName("LeftFootstepSocket"), true);
+	OnLeftFootstepEvent();
 }
 
 void AWindigoBaseCharacter::SimulateRightFootstep()
 {
 	CreateFootstep(FName("RightFootstepSocket"), false);
+	OnRightFootstepEvent();
 }
 
 void AWindigoBaseCharacter::Tick(float DeltaSeconds)
