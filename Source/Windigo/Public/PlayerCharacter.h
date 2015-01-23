@@ -94,6 +94,8 @@ protected:
 	virtual void OnStartRightClick();
 	virtual void OnStopRightClick();
 
+	virtual bool WillCollideWithWorld(const FVector _origin, const FVector _current, const FVector _new, FVector& _result, const float _radiusScale = 1.0f, bool bDrawTrace = false);
+
 	//Handle forward/backward movement
 	UFUNCTION()
 	void MoveForward(float Val);
